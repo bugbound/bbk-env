@@ -1,0 +1,48 @@
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: wwwdata-deployment
+spec:
+  selector:
+    matchLabels:
+      app: wwwdata
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: wwwdata
+    spec:
+      volumes:
+      - name: data-volume
+        hostPath: 
+          path: /opt/bbk-app
+          type: Directory   
+      containers:
+      - name: wwwdata
+        image: python:2.7-slim
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data  
+        #command: ["python", "-m", "SimpleHTTPServer"]
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo v1
+          cd /data
+          python -m SimpleHTTPServer
+        ports:
+        - containerPort: 8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: wwwdata-service
+spec:
+  selector:
+    app: wwwdata
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8000
+  type: LoadBalancer

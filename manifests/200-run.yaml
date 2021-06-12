@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pinky-runner
+  labels:
+    app: pinky-runner
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        app: pinky-runner
+    spec:
+      volumes:
+      - name: data-volume
+        hostPath: 
+          path: /opt/kubedata
+          type: Directory
+      containers:
+      - name: pinky-runner
+        image: python:3.8-slim
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo v1
+          apt update
+          apt install curl -y
+          
+          #curl stuff
+          curl "http://pinky-service:7777/start_pinky?pinkyscript=scanner/urlscan/arjun.yaml.template&project_id=1&project_code=youtube&input=scope/scope.urls.txt"
+          
+          curl "http://pinky-service:7777/start_pinky?pinkyscript=scanner/domainscan/gau-subs.yaml.template&project_id=1&project_code=youtube&input=scope/scope.domains.txt"
+          
+          
+          
+          echo all done son
+          
+          
+
+
+      restartPolicy: Never

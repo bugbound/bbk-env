@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-deployment
+  labels:
+    app: nfs-server
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      volumes:
+      - name: bbk-app-volume
+        # Multi node kube setup...
+        nfs: 
+          server: 172.16.0.10
+          path: /media/39b1bd3d-d92a-4fd5-9df8-72f089aa1912/kube3000_data/
+        # Single node kube setup...
+        #hostPath: 
+        #  path: /opt/bbk-app
+        #  type: Directory
+      containers:
+      - name: nfs-server
+        image: python:2.7
+        volumeMounts:
+        - name: bbk-app-volume
+          mountPath: /bbk-app
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo nfs setup v1
+          
+          sleep 60m
+
+
+        #command: ["sleep", "10m"]
+        ports:
+        - containerPort: 2049
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nfs-service
+spec:
+  selector:
+    app: nfs-server
+  ports:
+  - protocol: TCP
+    port: 2049
+    targetPort: 2049
+  type: LoadBalancer
+  
+  

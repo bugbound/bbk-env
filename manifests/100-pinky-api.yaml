@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+ name: pinky-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-pinky
+  namespace: default
+rules:
+- apiGroups: [ "batch" ]
+  resources: [ "pods", "services", "jobs"]
+  verbs: [ "get", "list", "watch", "create", "delete"]
+- apiGroups: [ "extensions" ]
+  resources: [ "deployments" ]
+  verbs: [ "get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+ name: pinky-rolebind
+ namespace: default
+roleRef:
+ kind: Role
+ name: pod-pinky
+ apiGroup: rbac.authorization.k8s.io
+subjects:
+ - kind: ServiceAccount
+   name: pinky-sa
+   namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pinky-api-deployment
+  labels:
+    app: pinky-api
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: pinky-api
+  template:
+    metadata:
+      labels:
+        app: pinky-api
+    spec:
+      serviceAccountName: pinky-sa
+      volumes:
+      - name: bbk-app-volume
+        hostPath: 
+          path: /opt/bbk-app
+          type: Directory
+      containers:
+      - name: pinky-api
+        image: python:2.7
+        volumeMounts:
+        - name: bbk-app-volume
+          mountPath: /bbk-app
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo pinky api setup v1
+          cd /bbk-app/bbk-apis/pinky-api
+          echo Installing components...
+          apt update 
+          apt -y install apt-transport-https gnupg2 curl gunicorn
+          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - 
+          echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list 
+          apt update
+          apt -y install kubectl
+          kubectl get pods
+          
+          chmod a+rx /bbk-app/bbk-apis/pinky-api/run_pinky_script.sh
+          echo starting pinky api
+          cd /bbk-app/bbk-apis/pinky-api
+          ls -la /
+          ls -la /bbk-app/
+          ls -la /bbk-app/bbk-apis/
+          python -m pip install --upgrade pip
+          python -m pip install flask
+          export PYTHONPATH=/usr/local/lib/python2.7/site-packages/
+          pwd
+          gunicorn --bind 0.0.0.0:8000 --log-level=DEBUG wsgi:app
+          sleep 60m
+
+
+        #command: ["sleep", "10m"]
+        ports:
+        - containerPort: 8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: pinky-service
+spec:
+  selector:
+    app: pinky-api
+  ports:
+  - protocol: TCP
+    port: 7777
+    targetPort: 8000
+  type: LoadBalancer
+  
+  

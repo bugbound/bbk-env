@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scope-configmap
+data:
+  scope.urls.txt: |-
+    https://www.youtube.com/
+    
+  scope.domains.txt: |-
+    youtube.com
+    
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bbk-setscope
+  labels:
+    app: bbk-setscope
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        app: bbk-setscope
+    spec:
+      volumes:
+      - name: bbk-app-volume
+        hostPath: 
+          path: /opt/bbk-app
+          type: Directory
+      - name: configmap-volume
+        configMap:
+          name: scope-configmap
+      containers:
+      - name: bbk-setscope
+        image: python:3.8-slim
+        volumeMounts:
+        - name: bbk-app-volume
+          mountPath: /bbk-app
+        - name: configmap-volume
+          mountPath: /scope
+          readOnly: true
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo set scope v1
+          #change the project name to the new project name
+          projectname="youtube"
+          cd /bbk-app/
+          ls -la /bbk-app/
+          mkdir -p /bbk-app/project-data/$projectname/scope/generated/
+          
+          echo copy urls
+          cp /scope/scope.urls.txt /bbk-app/project-data/$projectname/scope/
+          echo "" >> /bbk-app/project-data/$projectname/scope/scope.urls.txt
+          
+          echo copy domains
+          cp /scope/scope.domains.txt /bbk-app/project-data/$projectname/scope/
+          echo "" >> /bbk-app/project-data/$projectname/scope/scope.domains.txt
+          
+          ls -la /bbk-app/project-data/$projectname/scope/
+          
+          echo all done
+      restartPolicy: Never

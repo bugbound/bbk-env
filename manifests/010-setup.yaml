@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bbk-setup
+  labels:
+    app: bbk-setup
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        app: bbk-setup
+    spec:
+      volumes:
+      - name: opt-volume
+        hostPath: 
+          path: /opt/
+          type: Directory
+      containers:
+      - name: bbk-setup
+        image: python:3.8-slim
+        volumeMounts:
+        - name: opt-volume
+          mountPath: /optdata
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo setup v1
+          apt update
+          apt install git -y
+          cd /optdata/
+          git clone https://github.com/bugbound/bbk-app
+          cd bbk-app
+          git reset --hard HEAD
+          git pull
+          
+          echo all done
+      restartPolicy: Never
